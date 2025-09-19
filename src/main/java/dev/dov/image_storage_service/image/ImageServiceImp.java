@@ -4,6 +4,7 @@ import dev.dov.image_storage_service.image.interfaces.ImageService;
 import io.minio.*;
 import io.minio.errors.*;
 import io.minio.http.Method;
+import io.minio.messages.Item;
 import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
 import lombok.SneakyThrows;
@@ -21,7 +22,7 @@ import java.security.NoSuchAlgorithmException;
 @Service
 public class ImageServiceImp implements ImageService {
 
-    @Value("${garbage.bucket.name}")
+    @Value("${garbage.bucket-name}")
     private String bucketName;
 
     private final MinioClient minioClient;
@@ -62,7 +63,7 @@ public class ImageServiceImp implements ImageService {
     }
 
     @Override
-    public void addImage(String filename, InputStream inputStream) {
+    public void addImage(String filename, InputStream inputStream, String contentType) {
 
         try(BufferedInputStream bis = new BufferedInputStream(inputStream)) {
 
@@ -72,6 +73,7 @@ public class ImageServiceImp implements ImageService {
                     PutObjectArgs.builder()
                     .bucket(bucketName)
                             .object(filename)
+                            .contentType(contentType)
                             .stream(bis, bis.available(), 5 * 1024 * 1024)
                             .build());
 
@@ -92,7 +94,6 @@ public class ImageServiceImp implements ImageService {
     public String getPresignedObjectUrl(String filename) {
 
         ensureBucketExists();
-
         return minioClient.getPresignedObjectUrl(
                 GetPresignedObjectUrlArgs.builder()
                         .bucket(bucketName)
@@ -115,4 +116,43 @@ public class ImageServiceImp implements ImageService {
             );
         }
     }
+
+    @Override
+    @SneakyThrows
+    public void renameFilesByPrefix(String oldPrefix, String newPrefix) {
+        ensureBucketExists();
+
+        Iterable<Result<Item>> results = minioClient.listObjects(
+                ListObjectsArgs.builder()
+                        .bucket(bucketName)
+                        .prefix(oldPrefix)
+                        .recursive(true)
+                        .build()
+        );
+
+        for (Result<Item> result : results) {
+            Item item = result.get();
+            String oldName = item.objectName();
+            String newName = oldName.replaceFirst("^" + oldPrefix, newPrefix);
+
+            minioClient.copyObject(
+                    CopyObjectArgs.builder()
+                            .source(CopySource.builder()
+                                    .bucket(bucketName)
+                                    .object(oldName)
+                                    .build())
+                            .bucket(bucketName)
+                            .object(newName)
+                            .build()
+            );
+
+            minioClient.removeObject(
+                    RemoveObjectArgs.builder()
+                            .bucket(bucketName)
+                            .object(oldName)
+                            .build()
+            );
+        }
+    }
+
 }
