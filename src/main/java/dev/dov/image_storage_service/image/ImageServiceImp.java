@@ -22,7 +22,7 @@ import java.security.NoSuchAlgorithmException;
 @Service
 public class ImageServiceImp implements ImageService {
 
-    @Value("${garbage.bucket.name}")
+    @Value("${garbage.bucket-name}")
     private String bucketName;
 
     private final MinioClient minioClient;
@@ -63,7 +63,7 @@ public class ImageServiceImp implements ImageService {
     }
 
     @Override
-    public void addImage(String filename, InputStream inputStream) {
+    public void addImage(String filename, InputStream inputStream, String contentType) {
 
         try(BufferedInputStream bis = new BufferedInputStream(inputStream)) {
 
@@ -73,6 +73,7 @@ public class ImageServiceImp implements ImageService {
                     PutObjectArgs.builder()
                     .bucket(bucketName)
                             .object(filename)
+                            .contentType(contentType)
                             .stream(bis, bis.available(), 5 * 1024 * 1024)
                             .build());
 
@@ -93,7 +94,6 @@ public class ImageServiceImp implements ImageService {
     public String getPresignedObjectUrl(String filename) {
 
         ensureBucketExists();
-
         return minioClient.getPresignedObjectUrl(
                 GetPresignedObjectUrlArgs.builder()
                         .bucket(bucketName)

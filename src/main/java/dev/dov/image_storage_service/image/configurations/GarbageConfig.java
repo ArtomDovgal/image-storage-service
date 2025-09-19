@@ -18,7 +18,7 @@ public class GarbageConfig {
     @Value("${garbage.secret-key}")
     private String secretKey;
 
-    @Bean
+    @Bean(name = "garbageMinioClient")
     public MinioClient garbageConfig() {
 
         return MinioClient.builder()

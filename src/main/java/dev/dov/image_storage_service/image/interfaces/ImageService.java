@@ -9,7 +9,7 @@ public interface ImageService {
 
     void deleteImage(String filename);
 
-    void addImage(String filename, InputStream inputStream);
+    void addImage(String filename, InputStream inputStream,String contentType);
 
     void updateImage(String filename, InputStream inputStream);
 
