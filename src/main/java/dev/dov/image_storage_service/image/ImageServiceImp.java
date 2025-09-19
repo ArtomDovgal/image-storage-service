@@ -4,6 +4,7 @@ import dev.dov.image_storage_service.image.interfaces.ImageService;
 import io.minio.*;
 import io.minio.errors.*;
 import io.minio.http.Method;
+import io.minio.messages.Item;
 import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
 import lombok.SneakyThrows;
@@ -115,4 +116,43 @@ public class ImageServiceImp implements ImageService {
             );
         }
     }
+
+    @Override
+    @SneakyThrows
+    public void renameFilesByPrefix(String oldPrefix, String newPrefix) {
+        ensureBucketExists();
+
+        Iterable<Result<Item>> results = minioClient.listObjects(
+                ListObjectsArgs.builder()
+                        .bucket(bucketName)
+                        .prefix(oldPrefix)
+                        .recursive(true)
+                        .build()
+        );
+
+        for (Result<Item> result : results) {
+            Item item = result.get();
+            String oldName = item.objectName();
+            String newName = oldName.replaceFirst("^" + oldPrefix, newPrefix);
+
+            minioClient.copyObject(
+                    CopyObjectArgs.builder()
+                            .source(CopySource.builder()
+                                    .bucket(bucketName)
+                                    .object(oldName)
+                                    .build())
+                            .bucket(bucketName)
+                            .object(newName)
+                            .build()
+            );
+
+            minioClient.removeObject(
+                    RemoveObjectArgs.builder()
+                            .bucket(bucketName)
+                            .object(oldName)
+                            .build()
+            );
+        }
+    }
+
 }

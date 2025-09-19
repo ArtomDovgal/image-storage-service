@@ -15,4 +15,6 @@ public interface ImageService {
 
     String getPresignedObjectUrl(String filename);
 
+    void renameFilesByPrefix(String oldPrefix, String newPrefix);
+
 }

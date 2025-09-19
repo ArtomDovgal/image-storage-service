@@ -16,13 +16,13 @@ public class ImageController {
 
     private final ImageService imageService;
 
-    @PostMapping(name = "/{problem_id}/image/{image_id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(name = "/{location_id}/image/{image_id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Void> addImage(@RequestParam("file") MultipartFile file,
-                                         @PathVariable("problem_id") Long problemId,
-                                         @PathVariable("image_id") Long imageId) {
+                                         @PathVariable("location_id") String problemId,
+                                         @PathVariable("image_id") String imageId) {
 
         try {
-            String imageName = String.valueOf(problemId).concat("_").concat(String.valueOf(imageId));
+            String imageName = problemId.concat("_").concat(imageId);
             imageService.addImage(problemId.toString(), file.getInputStream());
             return ResponseEntity.ok().build();
 
@@ -32,12 +32,12 @@ public class ImageController {
         }
     }
 
-    @GetMapping("/{problem_id}/image/{image_id}/url")
+    @GetMapping("/{location_id}/image/{image_id}/url")
     public String getPresignedObjectUrl(
-                                        @PathVariable("problem_id") Long problemId,
-                                        @PathVariable("image_id") Long imageId) {
+                                        @PathVariable("location_id") String location_id,
+                                        @PathVariable("image_id") String imageId) {
 
-        String imageName = String.valueOf(problemId).concat("_").concat(String.valueOf(imageId));
+        String imageName = location_id.concat("_").concat(imageId);
         return imageService.getPresignedObjectUrl(imageName);
     }
 
