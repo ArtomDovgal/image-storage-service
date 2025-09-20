@@ -1,14 +1,13 @@
 package dev.dov.image_storage_service.image;
 
+import dev.dov.image_storage_service.image.enums.ImagesRequestType;
 import dev.dov.image_storage_service.image.interfaces.ImageService;
 import io.minio.*;
 import io.minio.errors.*;
 import io.minio.http.Method;
+import io.minio.messages.DeleteObject;
 import io.minio.messages.Item;
-import lombok.AllArgsConstructor;
-import lombok.NoArgsConstructor;
 import lombok.SneakyThrows;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -18,6 +17,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @Service
 public class ImageServiceImp implements ImageService {
@@ -154,5 +157,81 @@ public class ImageServiceImp implements ImageService {
             );
         }
     }
+
+    @Override
+    @SneakyThrows(Exception.class)
+    public Map<String, String> getPresignedUrlsByPrefixAndType(String locationId, ImagesRequestType type) {
+
+        ensureBucketExists();
+
+        Map<String, String> urlsMap = new HashMap<>();
+
+        String imageName = "def";
+
+        switch (type) {
+            case LOCATION -> imageName = "loc-".concat(locationId).concat("_");
+            case CHECK -> imageName = "check-".concat(locationId).concat("_");
+        }
+
+        Iterable<Result<Item>> results = minioClient.listObjects(
+                ListObjectsArgs.builder()
+                        .bucket(bucketName)
+                        .prefix(imageName)
+                        .recursive(true)
+                        .build()
+        );
+
+        for (Result<Item> result : results) {
+            Item item = result.get();
+            String objectName = item.objectName();
+            String url = minioClient.getPresignedObjectUrl(
+                    GetPresignedObjectUrlArgs.builder()
+                            .bucket(bucketName)
+                            .object(objectName)
+                            .method(Method.GET)
+                            .build()
+            );
+            String[] imageIdParts = objectName.split("_");
+
+            switch (imageIdParts.length) {
+                case 2 -> urlsMap.put(imageIdParts[imageIdParts.length-1], url);
+                case 3 -> urlsMap.put(imageIdParts[1], url);
+            }
+
+        }
+
+        return urlsMap;
+    }
+
+    @Override
+    @SneakyThrows(Exception.class)
+    public void deleteImageByPrefix(String prefix) {
+        ensureBucketExists();
+
+        Iterable<Result<Item>> results = minioClient.listObjects(
+                ListObjectsArgs.builder()
+                        .bucket(bucketName)
+                        .prefix(prefix)
+                        .recursive(true)
+                        .build()
+        );
+
+        List<DeleteObject> objectsToDelete = new ArrayList<>();
+
+        for (Result<Item> result : results) {
+            String objectName = result.get().objectName();
+            objectsToDelete.add(new DeleteObject(objectName));
+        }
+
+        if (!objectsToDelete.isEmpty()) {
+            minioClient.removeObjects(
+                    RemoveObjectsArgs.builder()
+                            .bucket(bucketName)
+                            .objects(objectsToDelete)
+                            .build()
+            );
+        }
+    }
+
 
 }
