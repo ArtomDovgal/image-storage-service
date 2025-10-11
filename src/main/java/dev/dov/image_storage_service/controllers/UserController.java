@@ -60,7 +60,7 @@ public class UserController {
     @GetMapping(path = "/{username}")
     public ResponseEntity<String> getUserImagePresignedObjectUrl(@PathVariable("username") String username) {
 
-        //TODO
+        //TODO.
         String user_id = username;
 
         String imageName = "user-".concat(user_id);
