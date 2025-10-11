@@ -1,6 +1,7 @@
 package dev.dov.image_storage_service.controllers;
 
 import dev.dov.image_storage_service.exceptions.InvalidFileTypeException;
+import dev.dov.image_storage_service.image.enums.ImagesRequestType;
 import dev.dov.image_storage_service.image.interfaces.ImageService;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -62,7 +63,8 @@ public class UserController {
         //TODO
         String user_id = username;
 
-        String imageName = "user-".concat("_").concat(user_id);
-        return ResponseEntity.ok().body(imageName);
+        String imageName = "user-".concat(user_id);
+        String url = imageService.getPresignedObjectUrl(imageName);
+        return ResponseEntity.ok().body(url);
     }
 }
