@@ -1,6 +1,5 @@
 package dev.dov.image_storage_service.image.configurations;
 
-import dev.dov.image_storage_service.image.interfaces.ImageService;
 import io.minio.MinioClient;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
