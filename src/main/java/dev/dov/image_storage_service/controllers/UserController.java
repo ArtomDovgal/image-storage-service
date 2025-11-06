@@ -47,6 +47,31 @@ public class UserController {
 
     }
 
+    @PutMapping(path = "/{username}",consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Map<String,Object>> updateUserImage(@RequestParam("file") MultipartFile file,
+                                                           @PathVariable("username") String username) {
+
+        //TODO
+        String userId = username;
+
+        String contentType = file.getContentType();
+
+        if (contentType == null || !contentType.startsWith("image/")) {
+            throw new InvalidFileTypeException("Must provide a valid image type");
+        }
+
+        String imageName = "user-".concat(userId);
+        int status = imageService.addImage(imageName, file,contentType,true);
+
+        Map<String, Object> responseBody = new HashMap<>();
+        String message = getMessage(status);
+        responseBody.put("status", status);
+        responseBody.put("message", message);
+
+        return ResponseEntity.ok(responseBody);
+
+    }
+
 
     @DeleteMapping(path = "/{username}")
     public ResponseEntity<Void> deleteUserImage(@PathVariable("username") String username) {

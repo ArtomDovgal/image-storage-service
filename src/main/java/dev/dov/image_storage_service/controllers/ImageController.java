@@ -46,6 +46,29 @@ public class ImageController {
 
     }
 
+    @PutMapping(value = "/{location_id}/image/{image_id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Map<String,Object>> updateLocationImage(@PathVariable("location_id") String locationId,
+                                                               @PathVariable("image_id") String imageId,
+                                                               @RequestParam("file") MultipartFile file) {
+
+        String contentType = file.getContentType();
+
+        if (contentType == null || !contentType.startsWith("image/")) {
+            throw new InvalidFileTypeException("Must provide a valid image type");
+        }
+
+        String imageName = "loc-".concat(locationId).concat("_").concat(imageId);
+        int status = imageService.addImage(imageName, file,contentType,true);
+
+        Map<String, Object> responseBody = new HashMap<>();
+        String message = getMessage(status);
+        responseBody.put("status", status);
+        responseBody.put("message", message);
+
+        return ResponseEntity.ok(responseBody);
+
+    }
+
 
     @PostMapping(value = "/{location_id}/check/{check_id}/image/{image_id}/", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Map<String,Object>> addCheckImage(@PathVariable("location_id") String locationId,
@@ -64,6 +87,33 @@ public class ImageController {
                 .concat("_").concat(imageId);
 
         int status = imageService.addImage(imageName, file,contentType, false);
+
+        Map<String, Object> responseBody = new HashMap<>();
+        String message = getMessage(status);
+        responseBody.put("status", status);
+        responseBody.put("message", message);
+
+        return ResponseEntity.ok(responseBody);
+
+    }
+
+    @PutMapping(value = "/{location_id}/check/{check_id}/image/{image_id}/", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Map<String,Object>> updateCheckImage(@PathVariable("location_id") String locationId,
+                                                            @Path("check_id") String checkId,
+                                                            @PathVariable("image_id") String imageId,
+                                                            @RequestParam("file") MultipartFile file) {
+
+        String contentType = file.getContentType();
+
+        if (contentType == null || !contentType.startsWith("image/")) {
+            throw new InvalidFileTypeException("Must provide a valid image type");
+        }
+
+        String imageName = "check-".concat(locationId)
+                .concat("_").concat(checkId)
+                .concat("_").concat(imageId);
+
+        int status = imageService.addImage(imageName, file,contentType, true);
 
         Map<String, Object> responseBody = new HashMap<>();
         String message = getMessage(status);
