@@ -1,0 +1,25 @@
+#docker network create rabbitmq_network_geo
+#docker-compose -f docker-compose.rabbitmq.yml -p rabbitmq-geodatabase up -d
+version: "3.9"
+
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - rabbitmq_network_geo
+
+volumes:
+  rabbitmq_data:
+
+networks:
+  rabbitmq_network_geo:
+    external: true

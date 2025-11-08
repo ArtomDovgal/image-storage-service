@@ -1,6 +1,7 @@
 package dev.dov.image_storage_service.image.interfaces;
 
 import dev.dov.image_storage_service.image.enums.ImagesRequestType;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.InputStream;
@@ -14,7 +15,7 @@ public interface ImageService {
 
     void deleteImageByPrefix(String prefix);
 
-    void addImage(String filename, InputStream inputStream,String contentType, boolean overwrite);
+    int addImage(String filename, MultipartFile file, String contentType, boolean overwrite);
 
     void updateImage(String filename, InputStream inputStream);
 

@@ -2,14 +2,18 @@ package dev.dov.image_storage_service.image;
 
 import dev.dov.image_storage_service.image.enums.ImagesRequestType;
 import dev.dov.image_storage_service.image.interfaces.ImageService;
+import dev.dov.image_storage_service.services_extensions.nsfw.NsfwImageChecker;
 import io.minio.*;
 import io.minio.errors.*;
 import io.minio.http.Method;
 import io.minio.messages.DeleteObject;
 import io.minio.messages.Item;
+import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.BufferedInputStream;
 import java.io.File;
@@ -23,16 +27,19 @@ import java.util.List;
 import java.util.Map;
 
 @Service
+@RequiredArgsConstructor
 public class ImageServiceImp implements ImageService {
 
     @Value("${garbage.bucket-name}")
     private String bucketName;
 
+//    @Value("${garage.public.url}")
+//    private String publicUrl;
+
     private final MinioClient minioClient;
 
-    public ImageServiceImp(MinioClient minioClient) {
-        this.minioClient = minioClient;
-    }
+    private final NsfwImageChecker nsfwImageChecker;
+
 
     @Override
     @SneakyThrows(Exception.class)
@@ -66,8 +73,19 @@ public class ImageServiceImp implements ImageService {
     }
 
     @Override
-    public void addImage(String filename, InputStream inputStream, String contentType, boolean overwrite) {
-        try (BufferedInputStream bis = new BufferedInputStream(inputStream)) {
+    public int addImage(String filename, MultipartFile file, String contentType, boolean overwrite) {
+
+        try {
+           boolean imageIsNsfw = nsfwImageChecker.isNsfw(file);
+
+            if(imageIsNsfw) {
+                return 0;
+            }
+        } catch (IOException e) {
+                e.printStackTrace();
+        }
+
+        try (BufferedInputStream bis = new BufferedInputStream(file.getInputStream())) {
 
             ensureBucketExists();
 
@@ -86,7 +104,10 @@ public class ImageServiceImp implements ImageService {
 
         } catch (Exception e) {
             e.printStackTrace();
+            return 1;
         }
+
+        return 2;
     }
 
     private boolean isSuchImageAlreadyExist(String filename) throws InsufficientDataException, InternalException, InvalidKeyException, InvalidResponseException, IOException, NoSuchAlgorithmException, ServerException, XmlParserException, ErrorResponseException {
@@ -102,11 +123,9 @@ public class ImageServiceImp implements ImageService {
             return true;
 
         } catch (io.minio.errors.ErrorResponseException e) {
-
             if ("NoSuchKey".equals(e.errorResponse().code())) {
                 return false;
             }
-
             throw new RuntimeException("Помилка при перевірці існування зображення: " + e.getMessage(), e);
 
         } catch (Exception e) {
@@ -125,12 +144,16 @@ public class ImageServiceImp implements ImageService {
     public String getPresignedObjectUrl(String filename) {
 
         ensureBucketExists();
-        return minioClient.getPresignedObjectUrl(
+
+        String url = minioClient.getPresignedObjectUrl(
                 GetPresignedObjectUrlArgs.builder()
                         .bucket(bucketName)
                         .object(filename)
                         .method(Method.GET)
                         .build());
+
+        //return rewritePresignedUrl(url);
+        return url;
     }
 
     private void ensureBucketExists() throws ErrorResponseException, InsufficientDataException, InternalException, InvalidKeyException, InvalidResponseException, IOException, NoSuchAlgorithmException, ServerException, XmlParserException {
@@ -261,5 +284,7 @@ public class ImageServiceImp implements ImageService {
         }
     }
 
-
+//    public String rewritePresignedUrl(String internalUrl) {
+//        return internalUrl.replace("http://garage:9000", publicUrl);
+//    }
 }
