@@ -33,9 +33,13 @@ public class ImageServiceImp implements ImageService {
     @Value("${garbage.bucket-name}")
     private String bucketName;
 
+//    @Value("${garage.public.url}")
+//    private String publicUrl;
+
     private final MinioClient minioClient;
 
     private final NsfwImageChecker nsfwImageChecker;
+
 
     @Override
     @SneakyThrows(Exception.class)
@@ -140,12 +144,16 @@ public class ImageServiceImp implements ImageService {
     public String getPresignedObjectUrl(String filename) {
 
         ensureBucketExists();
-        return minioClient.getPresignedObjectUrl(
+
+        String url = minioClient.getPresignedObjectUrl(
                 GetPresignedObjectUrlArgs.builder()
                         .bucket(bucketName)
                         .object(filename)
                         .method(Method.GET)
                         .build());
+
+        //return rewritePresignedUrl(url);
+        return url;
     }
 
     private void ensureBucketExists() throws ErrorResponseException, InsufficientDataException, InternalException, InvalidKeyException, InvalidResponseException, IOException, NoSuchAlgorithmException, ServerException, XmlParserException {
@@ -276,5 +284,7 @@ public class ImageServiceImp implements ImageService {
         }
     }
 
-
+//    public String rewritePresignedUrl(String internalUrl) {
+//        return internalUrl.replace("http://garage:9000", publicUrl);
+//    }
 }

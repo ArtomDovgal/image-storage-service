@@ -1,0 +1,46 @@
+version: "3.9"
+
+services:
+  garage:
+    image: minio/minio
+    container_name: garage   # правильний ключ
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: gto543geoDB
+      MINIO_ROOT_PASSWORD: ekFNkpGzh7ZM
+    command: server /data --console-address ":9001"
+    volumes:
+      - garage_data:/data
+    networks:
+      - rabbitmq_network_geo
+
+  image-storage-service:
+    build: .
+    container_name: image-storage-service   # правильний ключ
+    ports:
+      - "8081:8080"
+    env_file:
+      - .env
+    environment:
+      SPRING_RABBITMQ_HOST: rabbitmq
+      GARAGE_URL: ${GARAGE_URL}
+      BUCKET_NAME: ${BUCKET_NAME}
+      GARAGE_ACCESS_KEY: ${GARAGE_ACCESS_KEY}
+      GARAGE_SECRET_KEY: ${GARAGE_SECRET_KEY}
+      CHANGE_ID_TOPIC: ${CHANGE_ID_TOPIC}
+      CHANGE_ID_QUEUE: ${CHANGE_ID_QUEUE}
+      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER}
+      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+    depends_on:
+      - garage
+    networks:
+      - rabbitmq_network_geo
+
+volumes:
+  garage_data:
+
+networks:
+  rabbitmq_network_geo:
+    external: true
