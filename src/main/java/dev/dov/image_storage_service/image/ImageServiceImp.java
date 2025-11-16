@@ -11,6 +11,7 @@ import io.minio.messages.Item;
 import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -25,10 +26,14 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Logger;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class ImageServiceImp implements ImageService {
+
+    Logger logger = Logger.getLogger(ImageServiceImp.class.getName());
 
     @Value("${garbage.bucket-name}")
     private String bucketName;
@@ -79,6 +84,7 @@ public class ImageServiceImp implements ImageService {
             boolean imageIsNsfw = nsfwImageChecker.isNsfw(file);
 
             if(imageIsNsfw) {
+                log.info("Image didn't save bacause nsfw : {}", filename);
                 return 0;
             }
         } catch (IOException e) {
@@ -111,16 +117,19 @@ public class ImageServiceImp implements ImageService {
                             .bucket(bucketName)
                             .object(filename)
                             .contentType(contentType)
-                            .stream(bis, bis.available(), 5 * 1024 * 1024)
+                            .stream(file.getInputStream(), -1, 10 * 1024 * 1024)
                             .build()
             );
 
         } catch (Exception e) {
             e.printStackTrace();
+            log.info("Image didn`t save to {}", filename);
             return 1;
         }
 
+        log.info("Image saved to {}", filename);
         return 2;
+
     }
 
     private boolean isSuchImageAlreadyExist(String filename) throws InsufficientDataException, InternalException, InvalidKeyException, InvalidResponseException, IOException, NoSuchAlgorithmException, ServerException, XmlParserException, ErrorResponseException {
@@ -259,7 +268,7 @@ public class ImageServiceImp implements ImageService {
 
             switch (imageIdParts.length) {
                 case 2 -> urlsMap.put(imageIdParts[imageIdParts.length-1], url);
-                case 3 -> urlsMap.put(imageIdParts[1], url);
+                case 3 -> urlsMap.put(imageIdParts[2], url);
             }
 
         }
