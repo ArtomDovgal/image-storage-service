@@ -13,8 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 @RestController
 @RequestMapping(path = "/locations")
@@ -43,7 +42,6 @@ public class ImageController {
         responseBody.put("message", message);
 
         return ResponseEntity.ok(responseBody);
-
     }
 
     @PutMapping(value = "/{location_id}/image/{image_id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -70,10 +68,9 @@ public class ImageController {
     }
 
 
-    @PostMapping(value = "/{location_id}/check/{check_id}/image/{image_id}/", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(value = "/{location_id}/check/image/{check_image_id}/", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Map<String,Object>> addCheckImage(@PathVariable("location_id") String locationId,
-                                                 @Path("check_id") String checkId,
-                                                 @PathVariable("image_id") String imageId,
+                                                 @PathVariable("check_image_id") String checkImageId,
                                                  @RequestParam("file") MultipartFile file) {
 
         String contentType = file.getContentType();
@@ -83,8 +80,8 @@ public class ImageController {
         }
 
         String imageName = "check-".concat(locationId)
-                .concat("_").concat(checkId)
-                .concat("_").concat(imageId);
+                .concat("_").concat(checkImageId)
+                .concat("_").concat(String.valueOf(UUID.randomUUID()));
 
         int status = imageService.addImage(imageName, file,contentType, false);
 
@@ -94,12 +91,52 @@ public class ImageController {
         responseBody.put("message", message);
 
         return ResponseEntity.ok(responseBody);
-
     }
 
-    @PutMapping(value = "/{location_id}/check/{check_id}/image/{image_id}/", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(
+            value = "/{location_id}/check/image/{check_image_id}/all",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
+    public ResponseEntity<Map<String, Object>> addCheckImages(
+            @PathVariable("location_id") String locationId,
+            @PathVariable("check_image_id") String checkImageId,
+            @RequestParam("files") List<MultipartFile> files
+    ) {
+        if (files == null || files.isEmpty()) {
+            throw new InvalidFileTypeException("No images provided");
+        }
+
+        List<String> storedImageNames = new ArrayList<>();
+
+        for (MultipartFile file : files) {
+            String contentType = file.getContentType();
+            if (contentType == null || !contentType.startsWith("image/")) {
+                throw new InvalidFileTypeException("Must provide valid image files");
+            }
+
+            String imageName = "check-".concat(locationId)
+                    .concat("_").concat(checkImageId)
+                    .concat("_").concat(String.valueOf(UUID.randomUUID()));
+
+            int status = imageService.addImage(imageName, file, contentType, false);
+
+            if (status != 0) {
+                storedImageNames.add(imageName);
+            }
+        }
+
+        Map<String, Object> responseBody = new HashMap<>();
+        responseBody.put("status", "OK");
+        responseBody.put("uploadedCount", storedImageNames.size());
+        responseBody.put("imageNames", storedImageNames);
+
+        return ResponseEntity.ok(responseBody);
+    }
+
+
+    @PutMapping(value = "/{location_id}/check/{check_image_id}/image/{image_id}/", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Map<String,Object>> updateCheckImage(@PathVariable("location_id") String locationId,
-                                                            @Path("check_id") String checkId,
+                                                            @Path("check_image_id") String checkImageId,
                                                             @PathVariable("image_id") String imageId,
                                                             @RequestParam("file") MultipartFile file) {
 
@@ -110,7 +147,7 @@ public class ImageController {
         }
 
         String imageName = "check-".concat(locationId)
-                .concat("_").concat(checkId)
+                .concat("_").concat(checkImageId)
                 .concat("_").concat(imageId);
 
         int status = imageService.addImage(imageName, file,contentType, true);
@@ -133,6 +170,7 @@ public class ImageController {
         return ResponseEntity.ok().body(imageService.getPresignedObjectUrl(imageName));
     }
 
+    //for check send (location_id)_(check_image_id),type = check
     @GetMapping("/{location_id}/image/url")
     public ResponseEntity<Map<String,String>> getLocationImagePresignedObjectUrls(
             @PathVariable("location_id") String location_id,
@@ -147,6 +185,20 @@ public class ImageController {
             @PathVariable("image_id") String imageId) {
 
         String imageName = "loc-".concat(locationId).concat("_").concat(imageId);
+        imageService.deleteImage(imageName);
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping("/{location_id}/check/{check_image_id}/image/{image_id}")
+    public ResponseEntity<Void> deleteCheckImage(
+            @PathVariable("location_id") String locationId,
+            @PathVariable("check_image_id") String checkImageId,
+            @PathVariable("image_id") String imageId) {
+
+        String imageName = "check-".concat(locationId)
+                .concat("_").concat(checkImageId)
+                .concat("_").concat(imageId);
+
         imageService.deleteImage(imageName);
         return ResponseEntity.ok().build();
     }
