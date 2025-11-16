@@ -15,12 +15,33 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.util.*;
 
+@CrossOrigin(origins = "http://localhost:4200")
 @RestController
 @RequestMapping(path = "/locations")
 @AllArgsConstructor
 public class ImageController {
 
     private final ImageService imageService;
+
+    @PostMapping(value = "/{location_id}/image/{image_id}/isValid", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Map<String,Object>> checkLocationImage(@PathVariable("location_id") String locationId,
+                                                               @PathVariable("image_id") String imageId,
+                                                               @RequestParam("file") MultipartFile file) {
+
+        String contentType = file.getContentType();
+
+        if (contentType == null || !contentType.startsWith("image/")) {
+            throw new InvalidFileTypeException("Must provide a valid image type");
+        }
+
+        String imageName = "loc-".concat(locationId).concat("_").concat(imageId);
+        int status = imageService.checkImage(imageName, file,contentType,false);
+
+        Map<String, Object> responseBody = new HashMap<>();
+
+        return getResponseMessage(status, responseBody);
+
+    }
 
     @PostMapping(value = "/{location_id}/image/{image_id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Map<String,Object>> addLocationImage(@PathVariable("location_id") String locationId,
@@ -37,11 +58,9 @@ public class ImageController {
         int status = imageService.addImage(imageName, file,contentType,false);
 
         Map<String, Object> responseBody = new HashMap<>();
-        String message = getMessage(status);
-        responseBody.put("status", status);
-        responseBody.put("message", message);
 
-        return ResponseEntity.ok(responseBody);
+        return getResponseMessage(status, responseBody);
+
     }
 
     @PutMapping(value = "/{location_id}/image/{image_id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -59,11 +78,7 @@ public class ImageController {
         int status = imageService.addImage(imageName, file,contentType,true);
 
         Map<String, Object> responseBody = new HashMap<>();
-        String message = getMessage(status);
-        responseBody.put("status", status);
-        responseBody.put("message", message);
-
-        return ResponseEntity.ok(responseBody);
+        return getResponseMessage(status, responseBody);
 
     }
 
@@ -86,11 +101,7 @@ public class ImageController {
         int status = imageService.addImage(imageName, file,contentType, false);
 
         Map<String, Object> responseBody = new HashMap<>();
-        String message = getMessage(status);
-        responseBody.put("status", status);
-        responseBody.put("message", message);
-
-        return ResponseEntity.ok(responseBody);
+        return getResponseMessage(status, responseBody);
     }
 
     @PostMapping(
@@ -153,11 +164,7 @@ public class ImageController {
         int status = imageService.addImage(imageName, file,contentType, true);
 
         Map<String, Object> responseBody = new HashMap<>();
-        String message = getMessage(status);
-        responseBody.put("status", status);
-        responseBody.put("message", message);
-
-        return ResponseEntity.ok(responseBody);
+        return getResponseMessage(status, responseBody);
 
     }
 
@@ -213,13 +220,33 @@ public class ImageController {
     }
 
     @NotNull
-    private static String getMessage(int status) {
-        return switch (status) {
-            case 0 -> "Зображення визначено як небезпечне";
-            case 1 -> "Помилка при додаванні зображення";
-            case 2 -> "Зображення збережено успішно";
+    private static ResponseEntity<Map<String, Object>> getResponseMessage(int status, Map<String, Object> responseBody) {
+        String message;
+        HttpStatus httpStatus;
+
+        switch (status) {
+            case 0 -> {
+                message = "Зображення визначено як небезпечне";
+                httpStatus = HttpStatus.FORBIDDEN;
+            }
+            case 1 -> {
+                message = "Помилка при додаванні зображення";
+                httpStatus = HttpStatus.BAD_REQUEST;
+            }
+            case 2 -> {
+                message = "Зображення збережено успішно";
+                httpStatus = HttpStatus.OK;
+            }
             default -> throw new IllegalStateException("Unexpected value: " + status);
-        };
+        }
+
+        responseBody.put("status", status);
+        responseBody.put("message", message);
+
+        return ResponseEntity
+                .status(httpStatus)
+                .body(responseBody);
     }
+
 
 }

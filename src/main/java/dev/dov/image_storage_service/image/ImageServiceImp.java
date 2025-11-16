@@ -78,26 +78,39 @@ public class ImageServiceImp implements ImageService {
     }
 
     @Override
-    public int addImage(String filename, MultipartFile file, String contentType, boolean overwrite) {
+    public int checkImage(String filename, MultipartFile file, String contentType, boolean overwrite) {
 
         try {
-           boolean imageIsNsfw = nsfwImageChecker.isNsfw(file);
+            boolean imageIsNsfw = nsfwImageChecker.isNsfw(file);
 
             if(imageIsNsfw) {
                 log.info("Image didn't save bacause nsfw : {}", filename);
                 return 0;
             }
         } catch (IOException e) {
-                e.printStackTrace();
+            e.printStackTrace();
         }
+
+        try {
+            ensureBucketExists();
+            if (!overwrite && isSuchImageAlreadyExist(filename)) {
+                throw new IllegalStateException("Зображення '" + filename + "' вже існує.");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return 1;
+        }
+
+
+        return 2;
+    }
+
+    @Override
+    public int addImage(String filename, MultipartFile file, String contentType, boolean overwrite) {
 
         try (BufferedInputStream bis = new BufferedInputStream(file.getInputStream())) {
 
             ensureBucketExists();
-
-            if (!overwrite && isSuchImageAlreadyExist(filename)) {
-                throw new IllegalStateException("Зображення '" + filename + "' вже існує.");
-            }
 
             minioClient.putObject(
                     PutObjectArgs.builder()

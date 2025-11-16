@@ -17,6 +17,8 @@ public interface ImageService {
 
     int addImage(String filename, MultipartFile file, String contentType, boolean overwrite);
 
+    int checkImage(String filename, MultipartFile file, String contentType, boolean overwrite);
+
     void updateImage(String filename, InputStream inputStream);
 
     String getPresignedObjectUrl(String filename);
