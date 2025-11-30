@@ -35,7 +35,11 @@ public class ImageController {
         }
 
         String imageName = "loc-".concat(locationId).concat("_").concat(imageId);
-        int status = imageService.checkImage(imageName, file,contentType,false);
+
+        int status = 1;
+        if(imageService.checkImage(imageName, file,contentType)){
+            status = 0;
+        }
 
         Map<String, Object> responseBody = new HashMap<>();
 
@@ -83,7 +87,7 @@ public class ImageController {
     }
 
 
-    @PostMapping(value = "/{location_id}/check/image/{check_image_id}/", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(value = "/{location_id}/check/image/{check_image_id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Map<String,Object>> addCheckImage(@PathVariable("location_id") String locationId,
                                                  @PathVariable("check_image_id") String checkImageId,
                                                  @RequestParam("file") MultipartFile file) {
@@ -118,11 +122,13 @@ public class ImageController {
         }
 
         List<String> storedImageNames = new ArrayList<>();
+        int overallStatus = 2;
 
         for (MultipartFile file : files) {
             String contentType = file.getContentType();
             if (contentType == null || !contentType.startsWith("image/")) {
-                throw new InvalidFileTypeException("Must provide valid image files");
+                overallStatus = 1;
+                continue;
             }
 
             String imageName = "check-".concat(locationId)
@@ -131,18 +137,20 @@ public class ImageController {
 
             int status = imageService.addImage(imageName, file, contentType, false);
 
-            if (status != 0) {
+            if (status == 2) {
                 storedImageNames.add(imageName);
+            }else{
+                overallStatus = status;
             }
         }
 
         Map<String, Object> responseBody = new HashMap<>();
-        responseBody.put("status", "OK");
         responseBody.put("uploadedCount", storedImageNames.size());
         responseBody.put("imageNames", storedImageNames);
 
-        return ResponseEntity.ok(responseBody);
+        return getResponseMessage(overallStatus, responseBody);
     }
+
 
 
     @PutMapping(value = "/{location_id}/check/{check_image_id}/image/{image_id}/", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

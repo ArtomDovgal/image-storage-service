@@ -17,7 +17,7 @@ public interface ImageService {
 
     int addImage(String filename, MultipartFile file, String contentType, boolean overwrite);
 
-    int checkImage(String filename, MultipartFile file, String contentType, boolean overwrite);
+    boolean checkImage(String filename, MultipartFile file, String contentType);
 
     void updateImage(String filename, InputStream inputStream);
 
