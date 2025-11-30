@@ -78,38 +78,25 @@ public class ImageServiceImp implements ImageService {
     }
 
     @Override
-    public int checkImage(String filename, MultipartFile file, String contentType, boolean overwrite) {
+    public boolean checkImage(String filename, MultipartFile file, String contentType) {
 
         try {
-            boolean imageIsNsfw = nsfwImageChecker.isNsfw(file);
-
-            if(imageIsNsfw) {
-                log.info("Image didn't save bacause nsfw : {}", filename);
-                return 0;
-            }
+            return nsfwImageChecker.isNsfw(file);
         } catch (IOException e) {
-            e.printStackTrace();
+            throw new RuntimeException(e);
         }
-
-        try {
-            ensureBucketExists();
-            if (!overwrite && isSuchImageAlreadyExist(filename)) {
-                throw new IllegalStateException("Зображення '" + filename + "' вже існує.");
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-            return 1;
-        }
-
-
-        return 2;
     }
 
     @Override
     public int addImage(String filename, MultipartFile file, String contentType, boolean overwrite) {
+        // Перевірка NSFW
+        boolean checkResult = checkImage(filename, file, contentType);
+
+        if (checkResult) {
+            return 0;
+        }
 
         try (BufferedInputStream bis = new BufferedInputStream(file.getInputStream())) {
-
             ensureBucketExists();
 
             minioClient.putObject(
@@ -129,8 +116,8 @@ public class ImageServiceImp implements ImageService {
 
         log.info("Image saved to {}", filename);
         return 2;
-
     }
+
 
     private boolean isSuchImageAlreadyExist(String filename) throws InsufficientDataException, InternalException, InvalidKeyException, InvalidResponseException, IOException, NoSuchAlgorithmException, ServerException, XmlParserException, ErrorResponseException {
 
