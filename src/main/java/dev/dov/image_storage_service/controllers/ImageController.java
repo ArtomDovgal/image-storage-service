@@ -36,7 +36,7 @@ public class ImageController {
 
         String imageName = "loc-".concat(locationId).concat("_").concat(imageId);
 
-        int status = 1;
+        int status = 2;
         if(imageService.checkImage(imageName, file,contentType)){
             status = 0;
         }
